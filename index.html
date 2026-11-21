@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>A quiet drive</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: #eee;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #start {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      background: #000;
+      z-index: 3;
+    }
+    #start.hidden { display: none; }
+
+    #start h1 {
+      font-weight: 500;
+      font-size: 1.15rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #cfcfcf;
+    }
+
+    #play {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      background: #f3f3f3;
+      color: #111;
+      font: inherit;
+      font-size: 1.15rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      padding: 0.95rem 2.1rem;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 10px 30px rgba(0,0,0,0.45);
+    }
+    #play:hover { background: #fff; }
+    #play:active { transform: scale(0.98); }
+
+    #hint {
+      font-size: 0.8rem;
+      color: #777;
+    }
+
+    #drive {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+      z-index: 1;
+    }
+    #drive.hidden { display: none; }
+
+    #scare {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 4;
+      display: none;
+    }
+    #scare.show { display: block; }
+    #scare.show #scare-img { animation: scare-pop 0.12s ease-out both, scare-shake 0.55s 0.08s linear; }
+
+    #scare-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 30%;
+    }
+
+    @keyframes scare-pop {
+      from { transform: scale(1.35); filter: contrast(1.4) brightness(1.15); }
+      to   { transform: scale(1.08); filter: contrast(1.15) brightness(1.02); }
+    }
+    @keyframes scare-shake {
+      0%, 100% { transform: scale(1.08) translate(0, 0); }
+      10% { transform: scale(1.12) translate(-18px, 10px); }
+      20% { transform: scale(1.1) translate(16px, -12px); }
+      30% { transform: scale(1.14) translate(-10px, 14px); }
+      40% { transform: scale(1.09) translate(18px, 6px); }
+      50% { transform: scale(1.13) translate(-14px, -10px); }
+      60% { transform: scale(1.1) translate(10px, 16px); }
+      70% { transform: scale(1.12) translate(-16px, 4px); }
+      80% { transform: scale(1.08) translate(8px, -14px); }
+      90% { transform: scale(1.1) translate(-8px, 8px); }
+    }
+
+    .ctrl {
+      position: fixed;
+      z-index: 6;
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255,255,255,0.28);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .ctrl:hover { background: rgba(0,0,0,0.8); }
+    .ctrl.hidden { display: none; }
+
+    #close {
+      top: max(12px, env(safe-area-inset-top));
+      right: max(12px, env(safe-area-inset-right));
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    #replay {
+      bottom: max(16px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0.55rem 1.15rem;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+    }
+
+    #end {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      background: #000;
+      z-index: 3;
+    }
+    #end.show { display: flex; }
+    #end p { color: #888; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div id="start">
+    <h1>A quiet drive</h1>
+    <button id="play" type="button">Start the drive</button>
+    <p id="hint">Turn the sound on</p>
+  </div>
+
+  <video id="drive" class="hidden" src="drive.mp4" playsinline preload="auto"></video>
+
+  <div id="scare" aria-hidden="true">
+    <img id="scare-img" src="scare.jpg" alt="">
+  </div>
+
+  <div id="end">
+    <p>Fim do passeio.</p>
+    <button id="again" class="ctrl" type="button" style="position:static;transform:none;padding:0.7rem 1.3rem;border-radius:999px;">repetir</button>
+  </div>
+
+  <button id="close" class="ctrl hidden" type="button" title="Fechar" aria-label="Fechar">×</button>
+  <button id="replay" class="ctrl hidden" type="button">repetir</button>
+
+  <audio id="scream" src="scream.mp3" preload="auto"></audio>
+
+  <script>
+    const start = document.getElementById('start');
+    const play = document.getElementById('play');
+    const drive = document.getElementById('drive');
+    const scare = document.getElementById('scare');
+    const end = document.getElementById('end');
+    const closeBtn = document.getElementById('close');
+    const replay = document.getElementById('replay');
+    const again = document.getElementById('again');
+    const scream = document.getElementById('scream');
+
+    scream.volume = 1;
+    let unlocked = false;
+
+    function show(el) { el.classList.remove('hidden'); }
+    function hide(el) { el.classList.add('hidden'); }
+
+    async function unlockAudio() {
+      if (unlocked) return;
+      try {
+        scream.currentTime = 0;
+        await scream.play();
+        scream.pause();
+        scream.currentTime = 0;
+        unlocked = true;
+      } catch (err) {
+        /* autoplay policy: the same click will usually allow later play() */
+      }
+    }
+
+    function stopScream() {
+      scream.pause();
+      try { scream.currentTime = 0; } catch (e) {}
+    }
+
+    function hideScare() {
+      scare.classList.remove('show');
+      scare.setAttribute('aria-hidden', 'true');
+      hide(replay);
+      stopScream();
+    }
+
+    async function startDrive() {
+      hideScare();
+      end.classList.remove('show');
+      start.classList.add('hidden');
+      show(closeBtn);
+      hide(replay);
+      show(drive);
+      drive.currentTime = 0;
+      try {
+        await drive.play();
+      } catch (err) {
+        start.classList.remove('hidden');
+        hide(drive);
+        hide(closeBtn);
+      }
+    }
+
+    function triggerScare() {
+      hide(drive);
+      scare.classList.remove('show');
+      void scare.offsetWidth; /* restart animations */
+      scare.classList.add('show');
+      scare.setAttribute('aria-hidden', 'false');
+      show(closeBtn);
+      show(replay);
+      stopScream();
+      scream.volume = 1;
+      const playPromise = scream.play();
+      if (playPromise && playPromise.catch) playPromise.catch(function () {});
+    }
+
+    function closeAll() {
+      drive.pause();
+      try { drive.currentTime = 0; } catch (e) {}
+      hide(drive);
+      hideScare();
+      hide(closeBtn);
+      hide(replay);
+      end.classList.remove('show');
+      start.classList.remove('hidden');
+    }
+
+    function goToEndScreen() {
+      drive.pause();
+      hide(drive);
+      hideScare();
+      hide(replay);
+      hide(closeBtn);
+      start.classList.add('hidden');
+      end.classList.add('show');
+    }
+
+    play.addEventListener('click', async function () {
+      await unlockAudio();
+      startDrive();
+    });
+
+    drive.addEventListener('ended', triggerScare);
+
+    closeBtn.addEventListener('click', function () {
+      if (scare.classList.contains('show')) {
+        goToEndScreen();
+      } else {
+        closeAll();
+      }
+    });
+
+    replay.addEventListener('click', async function () {
+      await unlockAudio();
+      startDrive();
+    });
+
+    again.addEventListener('click', async function () {
+      await unlockAudio();
+      startDrive();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        if (scare.classList.contains('show')) goToEndScreen();
+        else closeAll();
+      }
+    });
+  </script>
+</body>
+</html>
